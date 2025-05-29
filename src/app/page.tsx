@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { ReactElement } from 'react';
@@ -236,7 +235,10 @@ export default function HomePage(): ReactElement {
       const subscription = await subscribeUserToPush();
       if (subscription) {
         setIsPushSubscribed(true);
-        toast({ title: 'Subscribed!', description: 'You will now receive push notifications for your reminders.' });
+        toast({ 
+          title: 'Subscribed!', 
+          description: 'You will now receive push notifications for your reminders. You can test it by creating a reminder.' 
+        });
         try {
           await fetch('/api/subscribe', {
             method: 'POST',
@@ -245,6 +247,11 @@ export default function HomePage(): ReactElement {
           });
         } catch (apiError) {
           console.error("Failed to send subscription to backend:", apiError);
+          toast({ 
+            variant: 'destructive', 
+            title: 'Subscription Warning', 
+            description: 'You are subscribed but there was an error saving your preferences. Notifications may not work properly.' 
+          });
         }
       }
     }
@@ -265,7 +272,7 @@ export default function HomePage(): ReactElement {
               onClick={handleToggleSubscription}
               disabled={isSubscriptionLoading}
               variant="outline"
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto text-sm"
             >
               {isSubscriptionLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -274,7 +281,7 @@ export default function HomePage(): ReactElement {
               ) : (
                 <BellRing className="mr-2 h-4 w-4" />
               )}
-              {isSubscriptionLoading ? 'Loading...' : isPushSubscribed ? 'Unsubscribe Notifications' : 'Subscribe to Notifications'}
+              {isSubscriptionLoading ? 'Loading...' : isPushSubscribed ? 'Unsubscribe' : 'Enable Notifications'}
             </Button>
             <Button
               onClick={() => { setEditingReminder(null); setIsFormOpen(true); }}
