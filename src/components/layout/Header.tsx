@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useQuery } from '@tanstack/react-query';
@@ -54,7 +53,7 @@ export function Header() {
               <span className="text-sm">XP Error</span>
             </div>
           ) : userLevelInfo ? (
-            <div className="flex flex-col items-end text-right">
+            <div className="flex flex-col items-end text-right pr-4">
               <div className="flex items-center">
                 <Award className="h-6 w-6 text-accent mr-2" />
                 <span className="font-semibold text-lg">
