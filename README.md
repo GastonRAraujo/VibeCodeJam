@@ -1,4 +1,3 @@
-
 # MicroRemind 🌟
 
 Your Personal Well-Being Companion - A Progressive Web App built with Next.js
@@ -61,14 +60,21 @@ MicroRemind is a lightweight, intuitive application designed to help you maintai
    yarn install
    ```
 
-3. Run the development server:
+3. Set up environment variables:
+   ```bash
+   # Create a .env file in the root directory
+   echo "OPENAI_KEY=your_api_key_here" > .env
+   ```
+   Replace `your_api_key_here` with your OpenAI API key. You can get one from [OpenAI's platform](https://platform.openai.com/api-keys).
+
+4. Run the development server:
    ```bash
    npm run dev
    # or
    yarn dev
    ```
 
-4. Open [http://localhost:9002](http://localhost:9002) in your browser
+5. Open [http://localhost:9002](http://localhost:9002) in your browser
 
 
 ## Contributing

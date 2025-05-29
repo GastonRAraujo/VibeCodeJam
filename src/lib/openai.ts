@@ -8,4 +8,4 @@ export const openai = new OpenAI({
   apiKey: process.env.OPENAI_KEY,
 });
 
-export const defaultModel = 'gpt-4-turbo-preview'; 
+export const defaultModel = "gpt-4-turbo-preview"; 
