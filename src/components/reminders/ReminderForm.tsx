@@ -44,62 +44,61 @@ import { LucideIconRenderer } from '@/components/icons/LucideIconRenderer';
 interface ReminderFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: ReminderInput) => Promise<void>;
+  onSubmit: (data: ReminderInput) => void;
   initialData?: Reminder | null;
+  aiSuggestions?: {
+    title?: string;
+    description?: string;
+    time?: string;
+    icon?: string;
+  };
 }
 
-export function ReminderForm({ isOpen, onClose, onSubmit, initialData }: ReminderFormProps) {
+export function ReminderForm({ isOpen, onClose, onSubmit, initialData, aiSuggestions }: ReminderFormProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuggestingTime, setIsSuggestingTime] = useState(false);
-  const [isSuggestingDetails, setIsSuggestingDetails] = useState(false); // Changed from isSuggestingIcon
+  const [isSuggestingDetails, setIsSuggestingDetails] = useState(false);
 
-  const form = useForm<ReminderFormData>({
+  const form = useForm<ReminderInput>({
     resolver: zodResolver(reminderSchema),
     defaultValues: {
-      title: '',
-      description: '',
-      time: '09:00',
-      frequency: 'Once',
-      icon: DEFAULT_REMINDER_ICON,
+      title: initialData?.title || aiSuggestions?.title || '',
+      description: initialData?.description || aiSuggestions?.description || '',
+      time: initialData?.time || aiSuggestions?.time || '09:00',
+      icon: initialData?.icon || aiSuggestions?.icon || 'bell',
+      frequency: initialData?.frequency || 'Once',
     },
   });
 
+  // Reset form when initialData or aiSuggestions change
   useEffect(() => {
-    if (isOpen) { // Reset form only when dialog opens
-      if (initialData) {
-        form.reset({
-          title: initialData.title,
-          description: initialData.description || '',
-          time: initialData.time,
-          frequency: initialData.frequency,
-          icon: initialData.icon || DEFAULT_REMINDER_ICON,
-        });
-      } else {
-        form.reset({
-          title: '',
-          description: '',
-          time: '09:00', // Default time for new reminder
-          frequency: 'Once',
-          icon: DEFAULT_REMINDER_ICON,
-        });
-      }
+    if (isOpen) {
+      form.reset({
+        title: initialData?.title || aiSuggestions?.title || '',
+        description: initialData?.description || aiSuggestions?.description || '',
+        time: initialData?.time || aiSuggestions?.time || '09:00',
+        icon: initialData?.icon || aiSuggestions?.icon || 'bell',
+        frequency: initialData?.frequency || 'Once',
+      });
     }
-  }, [initialData, form, isOpen]);
+  }, [isOpen, initialData, aiSuggestions, form]);
 
-  const handleFormSubmit = async (data: ReminderFormData) => {
+  const handleFormSubmit = async (data: ReminderInput) => {
     setIsSubmitting(true);
     try {
-      const reminderInput: ReminderInput = {
+      await onSubmit({
         ...data,
         id: initialData?.id,
-        icon: data.icon || DEFAULT_REMINDER_ICON,
-      };
-      await onSubmit(reminderInput);
+      });
       onClose();
     } catch (error) {
-      console.error("Failed to save reminder:", error);
-      toast({ variant: "destructive", title: "Error", description: "Failed to save reminder. Please try again." });
+      console.error('Error submitting form:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save reminder. Please try again.",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -108,21 +107,23 @@ export function ReminderForm({ isOpen, onClose, onSubmit, initialData }: Reminde
   const handleSuggestTime = async () => {
     const description = form.getValues("description");
     if (!description || description.trim().length < 3) {
-      toast({ variant: "default", title: "More Info Needed", description: "Provide a bit more description to suggest a time accurately." });
+      toast({ variant: "default", title: "Description Needed", description: "Please provide a description to suggest a time." });
       return;
     }
+
     setIsSuggestingTime(true);
     try {
-      const result = await suggestReminderTime({ description });
-      if (result.suggestedTime) {
-        form.setValue("time", result.suggestedTime, { shouldValidate: true });
-        toast({ title: "Time Suggested", description: `${result.suggestedTime} (Reason: ${result.reasoning})`});
-      } else {
-         toast({ variant: "default", title: "Suggestion Not Clear", description: "Could not confidently suggest a time. Please set manually."});
+      const suggestion = await suggestReminderTime({ description });
+      form.setValue("time", suggestion.time, { shouldValidate: true });
+      form.setValue("title", suggestion.title, { shouldValidate: true });
+      form.setValue("description", suggestion.description, { shouldValidate: true });
+      if (suggestion.icon) {
+        form.setValue("icon", suggestion.icon, { shouldValidate: true });
       }
+      toast({ title: "AI Suggestions Applied", description: `Time: ${suggestion.time}, Title: ${suggestion.title}` });
     } catch (error) {
       console.error("Error suggesting time:", error);
-      toast({ variant: "destructive", title: "AI Error", description: "Failed to get time suggestion."});
+      toast({ variant: "destructive", title: "Error", description: "Failed to get AI suggestions." });
     } finally {
       setIsSuggestingTime(false);
     }

@@ -8,44 +8,62 @@
  * - SuggestReminderTimeOutput - The return type for the suggestReminderTime function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import OpenAI from 'openai';
 
-const SuggestReminderTimeInputSchema = z.object({
-  description: z.string().describe('The description of the reminder.'),
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
-export type SuggestReminderTimeInput = z.infer<typeof SuggestReminderTimeInputSchema>;
 
-const SuggestReminderTimeOutputSchema = z.object({
-  suggestedTime: z.string().describe('A suggested time of day for the reminder, in HH:MM format.'),
-  reasoning: z.string().describe('The reasoning behind the suggested time.'),
-});
-export type SuggestReminderTimeOutput = z.infer<typeof SuggestReminderTimeOutputSchema>;
-
-export async function suggestReminderTime(input: SuggestReminderTimeInput): Promise<SuggestReminderTimeOutput> {
-  return suggestReminderTimeFlow(input);
+interface ReminderSuggestion {
+  title: string;
+  description: string;
+  time: string;
+  icon?: string;
 }
 
-const prompt = ai.definePrompt({
-  name: 'suggestReminderTimePrompt',
-  input: {schema: SuggestReminderTimeInputSchema},
-  output: {schema: SuggestReminderTimeOutputSchema},
-  prompt: `You are an AI assistant that suggests a suitable time of day for a reminder, given its description.  The time should be in HH:MM format.
+export async function suggestReminderTime({ description }: { description: string }): Promise<ReminderSuggestion> {
+  const prompt = `Given this reminder description: "${description}"
 
-Description: {{{description}}}
+Please analyze it and suggest a complete reminder with the following information:
+1. A clear, concise title (max 5 words)
+2. The full description
+3. The most appropriate time for this reminder
+4. A relevant icon name from this list: [calendar, clock, bell, check-circle, coffee, book, dumbbell, pill, shopping-cart, heart, star, gift, home, work, school, car, plane, train, bus, bike, walk, run, swim, food, drink, music, movie, game, phone, laptop, tablet, camera, video, photo, file, folder, document, note, pen, pencil, brush, paint, scissors, hammer, wrench, screwdriver, key, lock, unlock, eye, eye-off, sun, moon, cloud, rain, snow, wind, fire, water, earth, air, heart, brain, bone, tooth, pill, syringe, bandage, thermometer, stethoscope, microscope, telescope, compass, map, globe, flag, trophy, medal, crown, star, moon, sun, cloud, rain, snow, wind, fire, water, earth, air]
 
-Consider the description and suggest a time of day that would be appropriate for the reminder. Explain your reasoning.
-`,
-});
+Return the response in this exact JSON format:
+{
+  "title": "string",
+  "description": "string",
+  "time": "string (in HH:mm format)",
+  "icon": "string (from the provided list)"
+}`;
 
-const suggestReminderTimeFlow = ai.defineFlow(
-  {
-    name: 'suggestReminderTimeFlow',
-    inputSchema: SuggestReminderTimeInputSchema,
-    outputSchema: SuggestReminderTimeOutputSchema,
-  },
-  async input => {
-    const {output} = await prompt(input);
-    return output!;
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4-turbo-preview",
+      messages: [
+        {
+          role: "system",
+          content: "You are a helpful assistant that suggests reminder details based on user input. Always respond with valid JSON."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      response_format: { type: "json_object" }
+    });
+
+    const suggestion = JSON.parse(completion.choices[0].message.content || '{}') as ReminderSuggestion;
+    return suggestion;
+  } catch (error) {
+    console.error('Error getting AI suggestion:', error);
+    // Fallback to basic time suggestion if parsing fails
+    return {
+      title: description.split(' ').slice(0, 5).join(' '),
+      description,
+      time: '09:00',
+      icon: 'bell'
+    };
   }
-);
+}
