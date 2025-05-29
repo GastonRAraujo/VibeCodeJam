@@ -7,8 +7,8 @@
  * - SuggestReminderIconOutput - The return type for the suggestReminderIcon function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { openai, defaultModel } from '@/lib/openai';
+import { z } from 'zod';
 
 const SuggestReminderIconInputSchema = z.object({
   title: z.string().describe('The title of the reminder.'),
@@ -23,40 +23,50 @@ const SuggestReminderIconOutputSchema = z.object({
 export type SuggestReminderIconOutput = z.infer<typeof SuggestReminderIconOutputSchema>;
 
 export async function suggestReminderIcon(input: SuggestReminderIconInput): Promise<SuggestReminderIconOutput> {
-  return suggestReminderIconFlow(input);
-}
-
-const prompt = ai.definePrompt({
-  name: 'suggestReminderIconPrompt',
-  input: {schema: SuggestReminderIconInputSchema},
-  output: {schema: SuggestReminderIconOutputSchema},
-  prompt: `You are an AI assistant that suggests a suitable icon for a reminder from the Lucide React icon library, given its title and optional description. The icon name must be a valid CamelCase name from Lucide (e.g., 'GlassWater', 'Bike', 'BookOpen', 'AlarmClock', 'CalendarDays', 'Mail', 'MessageSquare').
+  const prompt = `You are an AI assistant that suggests a suitable icon for a reminder from the Lucide React icon library, given its title and optional description. The icon name must be a valid CamelCase name from Lucide (e.g., 'GlassWater', 'Bike', 'BookOpen', 'AlarmClock', 'CalendarDays', 'Mail', 'MessageSquare').
 
 If the title or description is vague or no specific icon seems appropriate, suggest a generic icon like 'ClipboardList' or 'Bell'.
 
-Reminder Title: {{{title}}}
-{{#if description}}Reminder Description: {{{description}}}{{/if}}
+Reminder Title: ${input.title}
+${input.description ? `Reminder Description: ${input.description}` : ''}
 
 Consider the title and description to suggest an icon. Explain your reasoning for choosing that specific icon.
-Ensure the suggestedIconName is a single, valid Lucide icon name.
-`,
-});
+Format your response as a JSON object with 'suggestedIconName' (string) and 'reasoning' (string) fields.`;
 
-const suggestReminderIconFlow = ai.defineFlow(
-  {
-    name: 'suggestReminderIconFlow',
-    inputSchema: SuggestReminderIconInputSchema,
-    outputSchema: SuggestReminderIconOutputSchema,
-  },
-  async input => {
-    const {output} = await prompt(input);
+  try {
+    const completion = await openai.chat.completions.create({
+      model: defaultModel,
+      messages: [
+        { 
+          role: "system", 
+          content: "You are a helpful AI assistant that suggests appropriate Lucide icons for reminders. You must respond with ONLY a valid JSON object containing suggestedIconName and reasoning fields. No other text or formatting." 
+        },
+        { role: "user", content: prompt }
+      ]
+    });
+
+    const response = completion.choices[0]?.message?.content;
+    if (!response) {
+      throw new Error('No response from OpenAI');
+    }
+
+    // Clean the response string to ensure it's valid JSON
+    const cleanResponse = response.trim().replace(/^```json\s*|\s*```$/g, '');
+    
+    const parsed = JSON.parse(cleanResponse);
+    const result = SuggestReminderIconOutputSchema.parse(parsed);
+
     // Ensure a fallback if AI fails to provide an icon name
-    if (!output?.suggestedIconName) {
+    if (!result.suggestedIconName) {
       return {
         suggestedIconName: 'ClipboardList',
         reasoning: 'No specific icon could be determined, defaulting to a generic list icon.',
       };
     }
-    return output;
+
+    return result;
+  } catch (error) {
+    console.error('Error in suggestReminderIcon:', error);
+    throw new Error('Failed to suggest reminder icon');
   }
-);
+}
