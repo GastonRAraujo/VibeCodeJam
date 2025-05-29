@@ -3,7 +3,7 @@ export interface Reminder {
   title: string;
   description?: string;
   time: string; // HH:MM format
-  frequency: "Once" | "Daily" | "Weekly" | "Custom";
+  frequency: "Once" | "Daily" | "Weekdays" | "Weekends" | "Weekly" | "Custom";
   icon?: string; // Lucide icon name
   createdAt: string; // ISO date string
   nextNotificationAt?: string; // ISO date string for next push

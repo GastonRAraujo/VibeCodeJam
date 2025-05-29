@@ -114,13 +114,8 @@ export function ReminderForm({ isOpen, onClose, onSubmit, initialData, aiSuggest
     setIsSuggestingTime(true);
     try {
       const suggestion = await suggestReminderTime({ description });
-      form.setValue("time", suggestion.time, { shouldValidate: true });
-      form.setValue("title", suggestion.title, { shouldValidate: true });
-      form.setValue("description", suggestion.description, { shouldValidate: true });
-      if (suggestion.icon) {
-        form.setValue("icon", suggestion.icon, { shouldValidate: true });
-      }
-      toast({ title: "AI Suggestions Applied", description: `Time: ${suggestion.time}, Title: ${suggestion.title}` });
+      form.setValue("time", suggestion.suggestedTime, { shouldValidate: true });
+      toast({ title: "AI Suggestions Applied", description: `Time: ${suggestion.suggestedTime} (${suggestion.reasoning})` });
     } catch (error) {
       console.error("Error suggesting time:", error);
       toast({ variant: "destructive", title: "Error", description: "Failed to get AI suggestions." });
@@ -261,6 +256,8 @@ export function ReminderForm({ isOpen, onClose, onSubmit, initialData, aiSuggest
                       <SelectContent>
                         <SelectItem value="Once">Once</SelectItem>
                         <SelectItem value="Daily">Daily</SelectItem>
+                        <SelectItem value="Weekdays">Weekdays (Mon-Fri)</SelectItem>
+                        <SelectItem value="Weekends">Weekends (Sat-Sun)</SelectItem>
                         <SelectItem value="Weekly">Weekly</SelectItem>
                         <SelectItem value="Custom">Custom (Not active)</SelectItem>
                       </SelectContent>

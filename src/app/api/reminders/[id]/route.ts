@@ -120,17 +120,23 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
+  const id = await Promise.resolve(context.params.id);
   const initialLength = dbReminders.length;
   // Ensure dbReminders is actually mutated here, not just a new array created
   const originalReminders = [...dbReminders];
   dbReminders.length = 0; // Clear current array
   originalReminders.filter(r => r.id !== id).forEach(r => dbReminders.push(r)); // Add back non-deleted items
-  
-  if (dbReminders.length < initialLength) {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return NextResponse.json({ message: 'Reminder deleted' }, { status: 200 });
+
+  if (dbReminders.length === initialLength) {
+    return NextResponse.json(
+      { message: 'Reminder not found' },
+      { status: 404 }
+    );
   }
-  return NextResponse.json({ message: 'Reminder not found' }, { status: 404 });
+
+  return NextResponse.json(
+    { message: 'Reminder deleted successfully' },
+    { status: 200 }
+  );
 }

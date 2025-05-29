@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { suggestReminderTime } from '@/ai/flows/suggest-reminder-time';
 import { suggestReminderIcon } from '@/ai/flows/suggest-reminder-icon';
+import { suggestReminderFrequency } from '@/ai/flows/suggest-reminder-frequency';
 
 interface ReminderListProps {
   reminders: Reminder[];
@@ -23,6 +24,7 @@ interface ReminderListProps {
     description?: string;
     time?: string; 
     icon?: string;
+    frequency?: string;
   }) => void;
   onComplete: (reminderId: string) => void;
   onSnooze: (reminderId: string) => void;
@@ -56,14 +58,24 @@ export function ReminderList({
     setIsProcessing(true);
     try {
       // Get complete reminder suggestion from AI
-      const suggestion = await suggestReminderTime({ description: aiInput });
+      const timeResult = await suggestReminderTime({ description: aiInput });
+      const iconResult = await suggestReminderIcon({ 
+        title: aiInput.split(' ').slice(0, 3).join(' '), 
+        description: aiInput 
+      });
+      const frequencyResult = await suggestReminderFrequency({
+        title: aiInput.split(' ').slice(0, 3).join(' '),
+        description: aiInput,
+        time: timeResult.suggestedTime
+      });
       
       // Open the form with AI suggestions
       onAddNew({
-        title: suggestion.title,
-        description: suggestion.description,
-        time: suggestion.time,
-        icon: suggestion.icon
+        title: aiInput.split(' ').slice(0, 5).join(' '), // Use first 5 words as title
+        description: aiInput,
+        time: timeResult.suggestedTime,
+        icon: iconResult.suggestedIconName,
+        frequency: frequencyResult.suggestedFrequency
       });
       setIsAIDialogOpen(false);
       setAiInput('');
@@ -71,7 +83,7 @@ export function ReminderList({
       // Show success toast with AI suggestions
       toast({ 
         title: "AI Suggestions Ready", 
-        description: `Created reminder: "${suggestion.title}" at ${suggestion.time}` 
+        description: `Time: ${timeResult.suggestedTime}, Icon: ${iconResult.suggestedIconName}, Frequency: ${frequencyResult.suggestedFrequency}` 
       });
     } catch (error) {
       console.error("Error creating reminder with AI:", error);
