@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { Reminder } from '@/types/reminder';
@@ -66,7 +65,7 @@ export function ReminderCard({ reminder, onEdit, onDelete, onComplete, onSnooze,
             <span>Next: {format(parseISO(reminder.nextNotificationAt), "MMM d, HH:mm")}</span>
           </div>
         )}
-         <div className="flex items-center text-foreground">
+         <div className="flex items-center text-foreground pr-4">
           <AwardIcon className="mr-2 h-4 w-4 text-yellow-500" />
           <span>XP: {reminder.xpValue}</span>
         </div>
@@ -77,14 +76,14 @@ export function ReminderCard({ reminder, onEdit, onDelete, onComplete, onSnooze,
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex flex-wrap justify-end gap-2 pt-2 border-t mt-auto p-4">
+      <CardFooter className="flex justify-end gap-2 pt-2 border-t mt-auto p-4">
         <Button 
           variant="outline" 
           size="sm" 
           onClick={() => onComplete(reminder.id)} 
           disabled={reminder.completed || isCompleting || isSnoozing}
           aria-label={`Complete reminder: ${reminder.title}`}
-          className="text-xs"
+          className="text-xs whitespace-nowrap"
         >
           <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Complete (+{reminder.xpValue})
         </Button>
@@ -94,7 +93,7 @@ export function ReminderCard({ reminder, onEdit, onDelete, onComplete, onSnooze,
           onClick={() => onSnooze(reminder.id)} 
           disabled={reminder.completed || isCompleting || isSnoozing}
           aria-label={`Snooze reminder: ${reminder.title}`}
-           className="text-xs"
+          className="text-xs whitespace-nowrap"
         >
           <XCircle className="mr-1 h-3.5 w-3.5" /> Snooze
         </Button>
@@ -104,7 +103,7 @@ export function ReminderCard({ reminder, onEdit, onDelete, onComplete, onSnooze,
           onClick={() => onEdit(reminder)} 
           disabled={reminder.completed || isCompleting || isSnoozing}
           aria-label={`Edit reminder: ${reminder.title}`}
-           className="text-xs"
+          className="text-xs whitespace-nowrap"
         >
           <Edit className="mr-1 h-3.5 w-3.5" /> Edit
         </Button>
@@ -114,7 +113,7 @@ export function ReminderCard({ reminder, onEdit, onDelete, onComplete, onSnooze,
           onClick={() => onDelete(reminder.id)} 
           disabled={isCompleting || isSnoozing} 
           aria-label={`Delete reminder: ${reminder.title}`}
-          className="text-destructive hover:text-destructive-foreground hover:bg-destructive/90 text-xs"
+          className="text-destructive hover:text-destructive-foreground hover:bg-destructive/90 text-xs whitespace-nowrap"
         >
           <Trash2 className="mr-1 h-3.5 w-3.5" /> Delete
         </Button>

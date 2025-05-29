@@ -3,8 +3,12 @@
 import type { Reminder } from '@/types/reminder';
 import { ReminderCard } from './ReminderCard';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Loader2, AlertTriangle, PlusCircle, Sparkles } from 'lucide-react';
 import Image from 'next/image';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 interface ReminderListProps {
   reminders: Reminder[];
@@ -31,6 +35,31 @@ export function ReminderList({
   isCompleting,
   isSnoozing
 }: ReminderListProps) {
+  const [isAIDialogOpen, setIsAIDialogOpen] = useState(false);
+  const [aiInput, setAiInput] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { toast } = useToast();
+
+  const handleAICreate = async () => {
+    if (!aiInput.trim()) {
+      toast({ variant: "destructive", title: "Error", description: "Please enter a description for your reminder." });
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      // Here you would call your AI service to create the reminder
+      // For now, we'll just open the form with the AI input
+      onAddNew();
+      setIsAIDialogOpen(false);
+      setAiInput('');
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to create reminder with AI." });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
@@ -63,27 +92,74 @@ export function ReminderList({
         />
         <h3 className="mt-8 text-2xl font-semibold text-foreground">No Reminders Yet!</h3>
         <p className="mt-2 text-muted-foreground">Looks like your schedule is clear. Add a new reminder to get started.</p>
-        <Button onClick={onAddNew} className="mt-6 bg-accent hover:bg-accent/90">
-          Add Your First Reminder
-        </Button>
+        <div className="flex gap-2 mt-6">
+          <Button onClick={() => setIsAIDialogOpen(true)} variant="outline">
+            <Sparkles className="mr-2 h-4 w-4 text-accent" /> AI Create
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {reminders.map((reminder) => (
-        <ReminderCard 
-          key={reminder.id} 
-          reminder={reminder} 
-          onEdit={onEdit} 
-          onDelete={onDelete}
-          onComplete={onComplete}
-          onSnooze={onSnooze}
-          isCompleting={isCompleting}
-          isSnoozing={isSnoozing}
-        />
-      ))}
-    </div>
+    <>
+      <div className="flex justify-end mb-6">
+        <div className="flex gap-2">
+          <Button onClick={() => setIsAIDialogOpen(true)} variant="outline">
+            <Sparkles className="mr-2 h-4 w-4 text-accent" /> AI Create
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {reminders.map((reminder) => (
+          <ReminderCard 
+            key={reminder.id} 
+            reminder={reminder} 
+            onEdit={onEdit} 
+            onDelete={onDelete}
+            onComplete={onComplete}
+            onSnooze={onSnooze}
+            isCompleting={isCompleting}
+            isSnoozing={isSnoozing}
+          />
+        ))}
+      </div>
+
+      <Dialog open={isAIDialogOpen} onOpenChange={setIsAIDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Reminder with AI</DialogTitle>
+            <DialogDescription>
+              Describe what you want to be reminded about, and AI will help create it.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Input
+              placeholder="e.g., Remind me to take my medicine every day at 8 PM"
+              value={aiInput}
+              onChange={(e) => setAiInput(e.target.value)}
+              disabled={isProcessing}
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsAIDialogOpen(false)} disabled={isProcessing}>
+                Cancel
+              </Button>
+              <Button onClick={handleAICreate} disabled={isProcessing || !aiInput.trim()}>
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" /> Create
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
