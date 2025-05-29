@@ -151,7 +151,10 @@ export function ReminderForm({ isOpen, onClose, onSubmit, initialData, aiSuggest
         if (!title || title.trim().length < 3) {
           toast({ variant: "default", title: "Title Needed for Icon", description: "Please provide a title to suggest an icon." });
         } else {
-          const iconResult = await suggestReminderIcon({ title, description });
+          const iconResult = await suggestReminderIcon({ 
+            title, 
+            description: description || '' 
+          });
           if (iconResult.suggestedIconName) {
             form.setValue("icon", iconResult.suggestedIconName, { shouldValidate: true });
             toast({ title: "Icon Suggested", description: `${iconResult.suggestedIconName} (Reason: ${iconResult.reasoning})`});
