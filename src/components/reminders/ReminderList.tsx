@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { suggestReminderTime } from '@/ai/flows/suggest-reminder-time';
+import { suggestReminderIcon } from '@/ai/flows/suggest-reminder-icon';
 
 interface ReminderListProps {
   reminders: Reminder[];
@@ -16,7 +18,12 @@ interface ReminderListProps {
   error: Error | null;
   onEdit: (reminder: Reminder) => void;
   onDelete: (reminderId: string) => void;
-  onAddNew: () => void;
+  onAddNew: (suggestions?: { 
+    title?: string;
+    description?: string;
+    time?: string; 
+    icon?: string;
+  }) => void;
   onComplete: (reminderId: string) => void;
   onSnooze: (reminderId: string) => void;
   isCompleting: boolean;
@@ -48,12 +55,26 @@ export function ReminderList({
 
     setIsProcessing(true);
     try {
-      // Here you would call your AI service to create the reminder
-      // For now, we'll just open the form with the AI input
-      onAddNew();
+      // Get complete reminder suggestion from AI
+      const suggestion = await suggestReminderTime({ description: aiInput });
+      
+      // Open the form with AI suggestions
+      onAddNew({
+        title: suggestion.title,
+        description: suggestion.description,
+        time: suggestion.time,
+        icon: suggestion.icon
+      });
       setIsAIDialogOpen(false);
       setAiInput('');
+      
+      // Show success toast with AI suggestions
+      toast({ 
+        title: "AI Suggestions Ready", 
+        description: `Created reminder: "${suggestion.title}" at ${suggestion.time}` 
+      });
     } catch (error) {
+      console.error("Error creating reminder with AI:", error);
       toast({ variant: "destructive", title: "Error", description: "Failed to create reminder with AI." });
     } finally {
       setIsProcessing(false);

@@ -101,6 +101,12 @@ export default function HomePage(): ReactElement {
   const [isSubscriptionLoading, setIsSubscriptionLoading] = useState(true);
   const [isDeleteConfirmationOpen, setIsDeleteConfirmationOpen] = useState(false);
   const [reminderToDelete, setReminderToDelete] = useState<Reminder | null>(null);
+  const [aiSuggestions, setAiSuggestions] = useState<{ 
+    title?: string;
+    description?: string;
+    time?: string; 
+    icon?: string;
+  }>({});
 
 
   useEffect(() => {
@@ -262,9 +268,9 @@ export default function HomePage(): ReactElement {
 
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-grow container mx-auto px-4 py-8">
+      <main className="flex-1 container py-8 px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
           <h1 className="text-3xl font-bold text-foreground">Your Reminders</h1>
           <div className="flex gap-2 flex-wrap justify-center">
@@ -284,7 +290,7 @@ export default function HomePage(): ReactElement {
               {isSubscriptionLoading ? 'Loading...' : isPushSubscribed ? 'Unsubscribe' : 'Enable Notifications'}
             </Button>
             <Button
-              onClick={() => { setEditingReminder(null); setIsFormOpen(true); }}
+              onClick={() => { setEditingReminder(null); setAiSuggestions({}); setIsFormOpen(true); }}
               className="bg-primary hover:bg-primary/90 w-full sm:w-auto"
               aria-label="Add new reminder"
             >
@@ -302,7 +308,11 @@ export default function HomePage(): ReactElement {
             const reminder = reminders.find(r => r.id === id);
             if (reminder) handleDeleteRequest(reminder);
           }}
-          onAddNew={() => { setEditingReminder(null); setIsFormOpen(true); }}
+          onAddNew={(suggestions) => { 
+            setEditingReminder(null); 
+            setAiSuggestions(suggestions || {}); 
+            setIsFormOpen(true); 
+          }}
           onComplete={(id) => completeMutation.mutate(id)}
           onSnooze={(id) => snoozeMutation.mutate(id)}
           isCompleting={completeMutation.isPending}
@@ -312,9 +322,10 @@ export default function HomePage(): ReactElement {
 
       <ReminderForm
         isOpen={isFormOpen}
-        onClose={() => { setIsFormOpen(false); setEditingReminder(null); }}
+        onClose={() => { setIsFormOpen(false); setEditingReminder(null); setAiSuggestions({}); }}
         onSubmit={handleFormSubmit}
         initialData={editingReminder}
+        aiSuggestions={aiSuggestions}
       />
 
       <DeleteConfirmationDialog
