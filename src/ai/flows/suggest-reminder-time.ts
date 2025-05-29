@@ -8,63 +8,56 @@
  * - SuggestReminderTimeOutput - The return type for the suggestReminderTime function.
  */
 
-import OpenAI from 'openai';
+import { openai, defaultModel } from '@/lib/openai';
+import { z } from 'zod';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+const SuggestReminderTimeInputSchema = z.object({
+  description: z.string().describe('The description of the reminder.'),
 });
 
-interface ReminderSuggestion {
-  title: string;
-  description: string;
-  time: string;
-  icon?: string;
-}
+export type SuggestReminderTimeInput = z.infer<typeof SuggestReminderTimeInputSchema>;
 
-export async function suggestReminderTime({ description }: { description: string }): Promise<ReminderSuggestion> {
-  const prompt = `Given this reminder description: "${description}"
+const SuggestReminderTimeOutputSchema = z.object({
+  suggestedTime: z.string().describe('A suggested time of day for the reminder, in HH:MM format.'),
+  reasoning: z.string().describe('The reasoning behind the suggested time.'),
+});
 
-Please analyze it and suggest a complete reminder with the following information:
-1. A clear, concise title (max 5 words)
-2. The full description
-3. The most appropriate time for this reminder
-4. A relevant icon name from this list: [calendar, clock, bell, check-circle, coffee, book, dumbbell, pill, shopping-cart, heart, star, gift, home, work, school, car, plane, train, bus, bike, walk, run, swim, food, drink, music, movie, game, phone, laptop, tablet, camera, video, photo, file, folder, document, note, pen, pencil, brush, paint, scissors, hammer, wrench, screwdriver, key, lock, unlock, eye, eye-off, sun, moon, cloud, rain, snow, wind, fire, water, earth, air, heart, brain, bone, tooth, pill, syringe, bandage, thermometer, stethoscope, microscope, telescope, compass, map, globe, flag, trophy, medal, crown, star, moon, sun, cloud, rain, snow, wind, fire, water, earth, air]
+export type SuggestReminderTimeOutput = z.infer<typeof SuggestReminderTimeOutputSchema>;
 
-Return the response in this exact JSON format:
-{
-  "title": "string",
-  "description": "string",
-  "time": "string (in HH:mm format)",
-  "icon": "string (from the provided list)"
-}`;
+export async function suggestReminderTime(input: SuggestReminderTimeInput): Promise<SuggestReminderTimeOutput> {
+  const prompt = `You are an AI assistant that suggests a suitable time of day for a reminder, given its description. 
+The time should be in HH:MM format (24-hour).
+
+Description: ${input.description}
+
+Consider the description and suggest a time of day that would be appropriate for the reminder. Explain your reasoning.
+Format your response as a JSON object with 'suggestedTime' (HH:MM format) and 'reasoning' (string) fields.`;
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4-turbo-preview",
+      model: defaultModel,
       messages: [
-        {
-          role: "system",
-          content: "You are a helpful assistant that suggests reminder details based on user input. Always respond with valid JSON."
+        { 
+          role: "system", 
+          content: "You are a helpful AI assistant that suggests appropriate times for reminders. You must respond with ONLY a valid JSON object containing suggestedTime and reasoning fields. No other text or formatting." 
         },
-        {
-          role: "user",
-          content: prompt
-        }
+        { role: "user", content: prompt }
       ],
       response_format: { type: "json_object" }
     });
 
-    const suggestion = JSON.parse(completion.choices[0].message.content || '{}') as ReminderSuggestion;
-    return suggestion;
+    const response = completion.choices[0]?.message?.content;
+    if (!response) {
+      throw new Error('No response from OpenAI');
+    }
+
+    // Clean the response string to ensure it's valid JSON
+    const cleanResponse = response.trim().replace(/^```json\s*|\s*```$/g, '');
+    
+    const parsed = JSON.parse(cleanResponse);
+    return SuggestReminderTimeOutputSchema.parse(parsed);
   } catch (error) {
-    console.error('Error getting AI suggestion:', error);
-    // Fallback to basic time suggestion if parsing fails
-    return {
-      title: description.split(' ').slice(0, 5).join(' '),
-      description,
-      time: '09:00',
-      icon: 'bell'
-    };
+    console.error('Error in suggestReminderTime:', error);
+    throw new Error('Failed to suggest reminder time');
   }
-}
 }

@@ -63,7 +63,7 @@ MicroRemind is a lightweight, intuitive application designed to help you maintai
 3. Set up environment variables:
    ```bash
    # Create a .env file in the root directory
-   echo "OPENAI_KEY=your_api_key_here" > .env
+   echo "OPENAI_API_KEY=your_api_key_here" > .env
    ```
    Replace `your_api_key_here` with your OpenAI API key. You can get one from [OpenAI's platform](https://platform.openai.com/api-keys).
 
