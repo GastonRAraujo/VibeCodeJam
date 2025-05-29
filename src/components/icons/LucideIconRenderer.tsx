@@ -2,34 +2,22 @@
 "use client";
 
 import * as LucideIcons from 'lucide-react';
+import { cn } from '@/lib/utils';
 import type { LucideProps } from 'lucide-react';
-import React from 'react';
-import { DEFAULT_REMINDER_ICON } from '@/lib/db';
 
-interface LucideIconRendererProps extends LucideProps {
-  name?: string | null; // Allow null for icon name
+interface LucideIconRendererProps {
+  name: string;
+  className?: string;
 }
 
-const FallbackIcon = (LucideIcons as any)[DEFAULT_REMINDER_ICON] || LucideIcons.HelpCircle;
-
-
-export function LucideIconRenderer({ name, className, ...props }: LucideIconRendererProps) {
-  if (!name || typeof name !== 'string' || !(name in LucideIcons)) {
-    return <FallbackIcon className={className} {...props} />;
-  }
-
-  // Type assertion because 'name' is dynamic.
-  // Ensure that LucideIcons only contains React components.
-  const IconComponent = (LucideIcons as Record<string, React.ElementType>)[name];
-
-  if (!IconComponent) {
-     return <FallbackIcon className={className} {...props} />;
-  }
+export function LucideIconRenderer({ name, className }: LucideIconRendererProps) {
+  // @ts-ignore - LucideIcons is a dynamic import
+  const Icon = LucideIcons[name as keyof typeof LucideIcons] as React.ComponentType<LucideProps>;
   
-  try {
-    return <IconComponent className={className} {...props} />;
-  } catch (error) {
-    console.error(`Error rendering Lucide icon "${name}":`, error);
-    return <FallbackIcon className={className} {...props} />;
+  if (!Icon) {
+    // Fallback to a default icon if the requested one doesn't exist
+    return <LucideIcons.HelpCircle className={cn("h-5 w-5", className)} />;
   }
+
+  return <Icon className={cn("h-5 w-5", className)} />;
 }

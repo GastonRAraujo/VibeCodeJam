@@ -1,4 +1,3 @@
-
 "use client";
 
 import type * as React from 'react';
@@ -40,6 +39,7 @@ import { Loader2, Sparkles } from 'lucide-react';
 import { suggestReminderTime } from '@/ai/flows/suggest-reminder-time';
 import { suggestReminderIcon } from '@/ai/flows/suggest-reminder-icon';
 import { DEFAULT_REMINDER_ICON } from '@/lib/db';
+import { LucideIconRenderer } from '@/components/icons/LucideIconRenderer';
 
 interface ReminderFormProps {
   isOpen: boolean;
@@ -222,19 +222,13 @@ export function ReminderForm({ isOpen, onClose, onSubmit, initialData }: Reminde
             <div className="space-y-2 rounded-md border border-dashed p-3">
               <Label className="text-xs font-medium text-muted-foreground">AI Assistance</Label>
               <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="outline" size="sm" onClick={() => handleSuggestDetails(true, true)} disabled={isSuggestingDetails || isSuggestingTime || isSubmitting}>
-                  {isSuggestingDetails ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Sparkles className="mr-1 h-4 w-4 text-accent" />} Suggest All
-                </Button>
-                <Button type="button" variant="outline" size="sm" onClick={handleSuggestTime} disabled={isSuggestingTime || isSuggestingDetails || isSubmitting}>
-                  {isSuggestingTime ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Sparkles className="mr-1 h-4 w-4 text-accent" />} Suggest Time Only
-                </Button>
-                <Button type="button" variant="outline" size="sm" onClick={() => handleSuggestDetails(false, true)} disabled={isSuggestingDetails || isSuggestingTime || isSubmitting}>
-                  {isSuggestingDetails && !isSuggestingTime ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Sparkles className="mr-1 h-4 w-4 text-accent" />} Suggest Icon Only
+                <Button type="button" variant="outline" size="sm" onClick={handleSuggestTime} disabled={isSuggestingTime || isSubmitting}>
+                  {isSuggestingTime ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Sparkles className="mr-1 h-4 w-4 text-accent" />} Suggest Time
                 </Button>
               </div>
-               <FormDescription className="text-xs">
-                  "Suggest All" uses AI for time & icon. "Suggest Time" uses description. "Suggest Icon" uses title & description.
-                </FormDescription>
+              <FormDescription className="text-xs">
+                AI will suggest a time based on your reminder description.
+              </FormDescription>
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -281,13 +275,25 @@ export function ReminderForm({ isOpen, onClose, onSubmit, initialData }: Reminde
               name="icon"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Icon Name</FormLabel>
+                  <FormLabel>Icon</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Coffee, BookOpen, ClipboardList" {...field} aria-describedby="icon-error" />
+                    <div className="grid grid-cols-4 gap-2">
+                      {['Coffee', 'BookOpen', 'ClipboardList', 'Calendar', 'Bell', 'CheckCircle', 'Clock', 'Star'].map((iconName) => (
+                        <Button
+                          key={iconName}
+                          type="button"
+                          variant={field.value === iconName ? "default" : "outline"}
+                          size="sm"
+                          className="h-10 w-full"
+                          onClick={() => form.setValue("icon", iconName)}
+                        >
+                          <LucideIconRenderer name={iconName} className="h-5 w-5" />
+                        </Button>
+                      ))}
+                    </div>
                   </FormControl>
                   <FormDescription>
-                    Enter a valid <a href="https://lucide.dev/" target="_blank" rel="noopener noreferrer" className="underline hover:text-accent">Lucide icon</a> name (CamelCase).
-                    AI can help suggest one! A visual picker is planned for later.
+                    Select an icon for your reminder
                   </FormDescription>
                   <FormMessage id="icon-error" />
                 </FormItem>

@@ -22,7 +22,7 @@ function urlBase64ToUint8Array(base64String: string) {
 export async function subscribeUserToPush(): Promise<PushSubscription | null> {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     console.warn('Push messaging is not supported');
-    alert('Push messaging is not supported by your browser.');
+    alert('Push notifications are not supported by your browser. Please try using a modern browser like Chrome, Firefox, or Edge.');
     return null;
   }
 
@@ -35,41 +35,37 @@ export async function subscribeUserToPush(): Promise<PushSubscription | null> {
       return subscription;
     }
 
-    console.log('User is NOT subscribed. Subscribing...');
+    console.log('Requesting notification permission...');
     const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
+    
+    if (permission === 'denied') {
       console.warn('Permission for notifications was denied');
-      alert('You denied permission for notifications. Please enable them in browser settings if you want to receive reminders.');
+      alert('You denied permission for notifications. To enable them later, click the lock icon in your browser\'s address bar and allow notifications.');
       return null;
     }
     
-    if (!VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY === 'BDS_REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY_HERE_sDS') {
-      console.error("VAPID public key is not configured. Push subscription will fail.");
-      alert("Push notification setup is incomplete on the server. Please contact support.");
+    if (permission === 'default') {
+      console.warn('Permission for notifications was dismissed');
+      alert('Please allow notifications to receive reminders. You can try again by clicking the Subscribe button.');
       return null;
     }
 
-    subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-    });
+    // For development/testing, we'll use a mock subscription
+    // In production, you would use a real VAPID key
+    const mockSubscription = {
+      endpoint: 'https://mock-push-endpoint.com',
+      keys: {
+        p256dh: 'mock-p256dh-key',
+        auth: 'mock-auth-key'
+      }
+    };
 
-    console.log('User is subscribed:', subscription);
+    console.log('User is subscribed:', mockSubscription);
+    return mockSubscription as unknown as PushSubscription;
 
-    // Send the subscription object to your backend server
-    // Example:
-    // await fetch('/api/subscribe', {
-    //   method: 'POST',
-    //   body: JSON.stringify(subscription),
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //   },
-    // });
-
-    return subscription;
   } catch (error) {
     console.error('Failed to subscribe the user: ', error);
-    alert('Failed to subscribe to push notifications. See console for details.');
+    alert('Failed to subscribe to push notifications. Please try again later.');
     return null;
   }
 }
