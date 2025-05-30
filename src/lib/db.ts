@@ -15,11 +15,20 @@ export interface UserData {
   lastCompletionDate: string | null; // Store date as 'yyyy-MM-dd'
 }
 
-export let userData: UserData = {
+// Initialize userData from localStorage or use defaults
+const storedUserData = typeof window !== 'undefined' ? localStorage.getItem('userData') : null;
+export let userData: UserData = storedUserData ? JSON.parse(storedUserData) : {
   xp: 125, // Starting XP
   currentStreak: 0,
   lastCompletionDate: null,
 };
+
+// Function to save userData to localStorage
+export function saveUserData() {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('userData', JSON.stringify(userData));
+  }
+}
 
 export const XP_LEVELS = [
   { level: 1, minXP: 0, label: "Beginner" },

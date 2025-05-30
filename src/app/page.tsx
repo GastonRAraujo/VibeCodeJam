@@ -52,7 +52,7 @@ async function updateReminder(updatedReminder: ReminderInput): Promise<Reminder>
   return responseData.reminder; // Return only the reminder part for general updates
 }
 
-async function deleteReminder(reminderId: string): Promise<{ message: string }> {
+async function deleteReminder(reminderId: string): Promise<{ deletedTitle: string }> {
   const res = await fetch(`/api/reminders/${reminderId}`, {
     method: 'DELETE',
   });
@@ -164,9 +164,9 @@ export default function HomePage(): ReactElement {
   
   const deleteMutation = useMutation({ 
     mutationFn: deleteReminder,
-    onSuccess: () => {
+    onSuccess: (data) => {
       baseMutationOptions.onSuccess();
-      toast({ title: "Reminder Deleted", description: `"${reminderToDelete?.title}" has been removed.` });
+      toast({ title: "Reminder Deleted", description: `"${data.deletedTitle}" has been removed.` });
       closeDeleteConfirmation();
     },
     onError: (err: Error) => {
@@ -211,9 +211,16 @@ export default function HomePage(): ReactElement {
     setIsFormOpen(true);
   };
 
-  const handleDeleteRequest = (reminder: Reminder) => {
-    setReminderToDelete(reminder);
-    setIsDeleteConfirmationOpen(true);
+  const handleComplete = (reminderId: string) => {
+    completeMutation.mutate(reminderId);
+  };
+
+  const handleDelete = (reminderId: string) => {
+    const reminder = reminders.find(r => r.id === reminderId);
+    if (reminder) {
+      setReminderToDelete(reminder);
+      setIsDeleteConfirmationOpen(true);
+    }
   };
 
   const confirmDelete = () => {
@@ -304,16 +311,13 @@ export default function HomePage(): ReactElement {
           isLoading={isLoading || isActionLoading}
           error={error}
           onEdit={handleEdit}
-          onDelete={(id) => {
-            const reminder = reminders.find(r => r.id === id);
-            if (reminder) handleDeleteRequest(reminder);
-          }}
+          onDelete={handleDelete}
           onAddNew={(suggestions) => { 
             setEditingReminder(null); 
             setAiSuggestions(suggestions || {}); 
             setIsFormOpen(true); 
           }}
-          onComplete={(id) => completeMutation.mutate(id)}
+          onComplete={handleComplete}
           onSnooze={(id) => snoozeMutation.mutate(id)}
           isCompleting={completeMutation.isPending}
           isSnoozing={snoozeMutation.isPending}
@@ -332,7 +336,7 @@ export default function HomePage(): ReactElement {
         isOpen={isDeleteConfirmationOpen}
         onClose={closeDeleteConfirmation}
         onConfirm={confirmDelete}
-        reminderTitle={reminderToDelete?.title}
+        reminderTitle={reminderToDelete?.title || ''}
         isDeleting={deleteMutation.isPending}
       />
 

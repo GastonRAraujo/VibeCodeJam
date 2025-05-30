@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { 
   reminders as dbReminders, 
   userData,
+  saveUserData,
   SNOOZE_PENALTY,
   QUICK_COMPLETION_WINDOW_MINUTES,
   QUICK_COMPLETION_BONUS_XP,
@@ -26,8 +27,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function PUT(request: NextRequest, context: { params: { id: string } }) {
+  const id = await Promise.resolve(context.params.id);
   try {
     const body = await request.json();
     const reminderIndex = dbReminders.findIndex(r => r.id === id);
@@ -64,21 +65,22 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           // Streak broken or first completion of a new streak period
           userData.currentStreak = 1;
         }
-        // If lastCompletionDate is today, streak already counted for today, no change.
 
         if (userData.currentStreak > 1) {
-          xpEarnedStreakBonus = (userData.currentStreak -1) * STREAK_BONUS_XP_PER_CONSECUTIVE_DAY;
+          xpEarnedStreakBonus = (userData.currentStreak - 1) * STREAK_BONUS_XP_PER_CONSECUTIVE_DAY;
         }
         userData.lastCompletionDate = todayStr;
 
         const totalXpFromThisCompletion = xpEarnedBase + xpEarnedQuickBonus + xpEarnedStreakBonus;
         userData.xp += totalXpFromThisCompletion;
+        
+        // Save userData to localStorage
+        saveUserData();
 
         let bonusMessage = `You earned ${xpEarnedBase} XP!`;
         if (xpEarnedQuickBonus > 0) bonusMessage += ` +${xpEarnedQuickBonus} XP (Quick Completion!)`;
         if (xpEarnedStreakBonus > 0) bonusMessage += ` +${xpEarnedStreakBonus} XP (${userData.currentStreak}-day streak!)`;
         if (xpEarnedQuickBonus > 0 || xpEarnedStreakBonus > 0) bonusMessage += ` Total: ${totalXpFromThisCompletion} XP.`;
-
 
         completionDetails = {
           xpEarned: {
@@ -91,12 +93,22 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           bonusMessage: bonusMessage,
         };
 
+        // Update the reminder with the new XP value
+        dbReminders[reminderIndex] = {
+          ...reminderToUpdate,
+          completed: true,
+          xpValue: totalXpFromThisCompletion
+        };
+
       } else if (body.action === 'snooze' && !reminderToUpdate.completed) {
         userData.xp = Math.max(0, userData.xp - SNOOZE_PENALTY);
         // Reset streak on snooze
         const oldStreak = userData.currentStreak;
         userData.currentStreak = 0;
         userData.lastCompletionDate = null; 
+        
+        // Save userData to localStorage
+        saveUserData();
 
         completionDetails = {
          xpEarned: { base: -SNOOZE_PENALTY, quickBonus: 0, streakBonus: 0, total: -SNOOZE_PENALTY },
@@ -112,7 +124,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
     
     await new Promise(resolve => setTimeout(resolve, 500));
-    return NextResponse.json({ reminder: dbReminders[reminderIndex], completionDetails });
+    return NextResponse.json({ 
+      reminder: dbReminders[reminderIndex], 
+      completionDetails,
+      userData: { xp: userData.xp, currentStreak: userData.currentStreak }
+    });
 
   } catch (error) {
     console.error("Failed to update reminder:", error);
@@ -122,21 +138,30 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
 export async function DELETE(request: NextRequest, context: { params: { id: string } }) {
   const id = await Promise.resolve(context.params.id);
-  const initialLength = dbReminders.length;
-  // Ensure dbReminders is actually mutated here, not just a new array created
-  const originalReminders = [...dbReminders];
-  dbReminders.length = 0; // Clear current array
-  originalReminders.filter(r => r.id !== id).forEach(r => dbReminders.push(r)); // Add back non-deleted items
-
-  if (dbReminders.length === initialLength) {
+  
+  // Find the reminder before deleting it
+  const reminderToDelete = dbReminders.find(r => r.id === id);
+  if (!reminderToDelete) {
     return NextResponse.json(
       { message: 'Reminder not found' },
       { status: 404 }
     );
   }
 
+  // Store the title before deletion
+  const deletedTitle = reminderToDelete.title;
+  
+  // Remove the reminder from the array
+  const index = dbReminders.findIndex(r => r.id === id);
+  if (index !== -1) {
+    dbReminders.splice(index, 1);
+  }
+
   return NextResponse.json(
-    { message: 'Reminder deleted successfully' },
+    { 
+      message: 'Reminder deleted successfully',
+      deletedTitle: deletedTitle
+    },
     { status: 200 }
   );
 }
